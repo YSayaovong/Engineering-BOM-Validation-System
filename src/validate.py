@@ -29,14 +29,22 @@ def read_bom(path):
 
 def compare(engineering, manufacturing):
     errors = []
+    ambiguous_parts = set()
     for side, rows in (("engineering", engineering), ("manufacturing", manufacturing)):
         counts = Counter(x["part_number"] for x in rows)
         for part, count in sorted(counts.items()):
             if count > 1:
-                errors.append({"part_number":part,"issue":"DUPLICATE_PART","engineering":"" if side=="manufacturing" else count,"manufacturing":count if side=="manufacturing" else "","detail":f"{side}: {count} rows"})
+                ambiguous_parts.add(part)
+                errors.append({
+                    "part_number": part,
+                    "issue": "DUPLICATE_PART",
+                    "engineering": count if side == "engineering" else "",
+                    "manufacturing": count if side == "manufacturing" else "",
+                    "detail": f"{side}: {count} rows. Resolve duplicate before comparison.",
+                })
     e = {x["part_number"]:x for x in engineering}
     m = {x["part_number"]:x for x in manufacturing}
-    for part in sorted(e.keys() | m.keys()):
+    for part in sorted((e.keys() | m.keys()) - ambiguous_parts):
         a,b=e.get(part),m.get(part)
         if a is None or b is None:
             errors.append({"part_number":part,"issue":"MISSING_IN_ENGINEERING" if a is None else "MISSING_IN_MANUFACTURING","engineering":"present" if a else "missing","manufacturing":"present" if b else "missing","detail":""})
