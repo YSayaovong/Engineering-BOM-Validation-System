@@ -9,6 +9,6 @@ python src/validate.py --engineering data/engineering.csv --manufacturing data/m
 pytest -q
 ```
 
-Input CSV columns: `part_number,revision,quantity`. Part numbers are case-sensitive. Duplicate part numbers are reported; the last record is used for cross-source comparison.
+Input CSV columns: `part_number,revision,quantity`. Part numbers are case-sensitive. A duplicate part number produces a review exception per affected source. Cross-source checks for that part resume once both exports have a single authoritative row per part. See the [requirements and acceptance criteria](docs/reconciliation-case-study.md).
 
 **Limitations:** Single-level part-number comparison, synthetic data only, no live CAD/SAP/PLM integration. Not an engineering approval system.
