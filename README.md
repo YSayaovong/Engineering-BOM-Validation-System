@@ -36,7 +36,7 @@ The output identifies data exceptions; it does not determine which BOM is author
 
 Part-number matching is case-sensitive. Revision values are compared directly as strings; the tool does not validate the revision against a released baseline.
 
-**Duplicate handling:** Duplicate part numbers are reported as exceptions. During cross-source comparison, the program constructs a dictionary keyed by part number, so the *last occurrence* of a duplicate is used for its revision and quantity comparison. It does not aggregate duplicate quantities or automatically choose an approved record.
+**Duplicate handling:** Duplicate part numbers are reported as exceptions. During cross-source comparison, the program constructs a dictionary keyed by part number, so field-level comparison is skipped for the ambiguous part until the duplicate is resolved. It does not aggregate duplicate quantities or automatically choose an approved record.
 
 ## Demonstration dataset
 
@@ -45,7 +45,7 @@ The repository includes two synthetic BOM exports:
 - `data/engineering.csv` — five engineering part records.
 - `data/manufacturing.csv` — six manufacturing rows, including a duplicate part number.
 
-The sample deliberately includes a part present only in engineering, a part present only in manufacturing, duplicate manufacturing entries, and revision and quantity differences for a shared part.
+The sample deliberately includes a part present only in engineering, a part present only in manufacturing, duplicate manufacturing entries, and revision and quantity differences for a shared part. Duplicate part records are flagged independently; field comparisons for those parts are skipped.
 
 This dataset exercises all five discrepancy classifications and demonstrates the comparison results without using confidential engineering or employer data.
 
@@ -83,7 +83,7 @@ python src/validate.py \
   --manufacturing data/manufacturing.csv \
   --output reports/bom_discrepancies.xlsx
 
-pytest -q
+python -m pytest -v
 ```
 
 Both input files must contain:
@@ -92,7 +92,7 @@ Both input files must contain:
 part_number,revision,quantity
 ```
 
-The output workbook is saved to `reports/bom_discrepancies.xlsx` in the example. The application creates the destination directory when needed.
+The output workbook is saved to `reports/bom_discrepancies.xlsx` in the example. The application creates the destination directory when needed. Running `python src/validate.py` without arguments uses the bundled synthetic datasets and writes a report to `reports/bom_discrepancies.xlsx`. Input errors produce a nonzero command exit status.
 
 ## Repository structure
 
@@ -105,18 +105,20 @@ src/
 tests/
   test_validate.py       Automated reconciliation and report-creation tests
 requirements.txt         Python dependencies
+.github/workflows/tests.yml  GitHub Actions regression checks
+.gitignore               Excludes generated reports and Python caches
 README.md                Project documentation
 ```
 
 ## Automated tests
 
-The repository includes tests that:
+The repository includes an expanded automated test suite that:
 
 - Confirm the demonstration inputs produce all five expected discrepancy types.
 - Verify that the application creates an Excel report file.
 - Confirm that identical single-record BOM inputs produce no discrepancies.
 
-The code also contains input validation rules that are not individually covered by the current test suite.
+Expanded automated coverage checks malformed CSV input, missing revision values, invalid quantities, duplicate records, Excel report summary accuracy, spreadsheet formula injection safeguards, and command-line execution from a different working directory. GitHub Actions runs these tests and generates a synthetic report on pushes and pull requests.
 
 ## Engineering configuration relevance
 
@@ -140,7 +142,7 @@ This project is a single-level, offline BOM comparison and reporting demonstrati
 - No interpretation of approved engineering change orders, release statuses, effectivity dates, or configuration baselines.
 - No automated reconciliation decisions, engineering sign-off, or production release.
 - No part-number normalization; comparisons remain case-sensitive.
-- Duplicate part numbers are flagged, but the last matching row is used for cross-source comparisons.
+- Duplicate part numbers are flagged, and revision/quantity comparisons for those ambiguous parts are skipped until reviewed.
 - No verification that one source is authoritative or that a BOM difference is necessarily an error.
 - Sample inputs are synthetic and do not contain employer information.
 
